@@ -624,17 +624,6 @@ function buildDialog(id){
         <div class="ok-msg" id="ok3">✓ Thanks! Door code is: EXIT</div>
         <button class="d-btn" onclick="submitRoom3()">Submit Form</button>`;
     },
-
-    // ── FIREBASE SETUP ────────────────────────
-    firebase: ()=>{
-      title.textContent = '⚙ FIREBASE SETUP (OPTIONAL)';
-      body.innerHTML = `
-        <p>To save player answers to Firebase, enter your Realtime Database URL. Get it free at <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a>.</p>
-        <label class="d-label">Firebase Realtime Database URL</label>
-        <input class="d-input" id="fb-input" type="text" placeholder="https://YOUR-PROJECT-default-rtdb.firebaseio.com" value="${FIREBASE_URL}">
-        <button class="d-btn" onclick="saveFb()">Save URL</button>
-        <button class="d-btn secondary" onclick="closeDialog()">Skip</button>`;
-    }
   };
 
   if(dialogs[id]) dialogs[id]();
@@ -759,7 +748,7 @@ function hide(id){ const e=document.getElementById(id); if(e) e.style.display='n
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function saveFb(){
-  const v = document.getElementById('fb-input')?.value.trim().replace(/\/$/,'');
+  const v = https://console.firebase.google.com/u/0/project/senior-project-b001e/database/senior-project-b001e-default-rtdb/data/~2F;
   if(v && v.startsWith('https://')){
     FIREBASE_URL = v;
     localStorage.setItem('fb_url', v);
