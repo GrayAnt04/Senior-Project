@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don't Get Trapped</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --cream:#f5f0e8;--brick:#8b3a2a;--brick2:#a04535;--sky:#7ec8e3;
+  --grass:#5a8a3c;--grass2:#4a7a2c;--stone:#9b9b8a;--stone2:#7a7a6a;
+  --wood:#c8956a;--wood2:#a87850;--win:#aad4e8;--win2:#88b8d0;
+  --text:#2a1a0a;--ui:#fffdf5;--accent:#d4541a;--gold:#e8a820;
+  --shadow:rgba(0,0,0,0.35);--pixel:'Pixelify Sans',monospace;--vt:'VT323',monospace;
+}
+body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:var(--pixel);overflow:hidden;}
+
+/* ── GAME WRAPPER ── */
+#game{position:relative;width:900px;height:560px;overflow:hidden;border:4px solid #333;box-shadow:0 0 60px rgba(0,0,0,0.8),0 0 120px rgba(0,0,0,0.4);}
+
+/* ── CANVAS (each room is a <div> scene) ── */
+.room{position:absolute;inset:0;display:none;}
+.room.active{display:block;}
+
+/* ── SKY / GROUND BASE ── */
+.sky{position:absolute;top:0;left:0;right:0;height:220px;background:linear-gradient(180deg,#4a90d9 0%,#7ec8e3 60%,#aee0f0 100%);}
+.ground{position:absolute;bottom:0;left:0;right:0;height:340px;background:var(--grass);}
+.ground-strip{position:absolute;bottom:220px;left:0;right:0;height:24px;background:var(--grass2);}
+.path{position:absolute;bottom:0;left:0;right:0;height:120px;background:#c8b88a;}
+.path-line{position:absolute;bottom:50px;left:0;right:0;height:4px;background:rgba(255,255,255,0.3);}
+
+/* ── PIXEL BUILDING STYLES ── */
+.building{position:absolute;bottom:220px;}
+.bwall{background:var(--brick);}
+.bwall2{background:var(--brick2);}
+.roof{background:#6a3020;}
+.window-pane{background:var(--win);border:3px solid #5a3020;position:absolute;}
+.window-pane.lit{background:#ffe8a0;box-shadow:0 0 8px rgba(255,220,100,0.6);}
+.door{background:#5a3020;position:absolute;border:3px solid #3a1a0a;}
+.sign{background:var(--gold);border:3px solid #8a6010;position:absolute;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#3a2a00;text-align:center;padding:2px;}
+.column{background:#d4c8a8;border:2px solid #a89878;position:absolute;}
+.steps{position:absolute;}
+
+/* ── CLICKABLE OBJECTS ── */
+.hotspot{position:absolute;cursor:pointer;transition:filter 0.15s;}
+.hotspot:hover{filter:brightness(1.25);}
+.hotspot:hover .tooltip{opacity:1;transform:translateY(-4px);}
+.tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(0);background:rgba(0,0,0,0.85);color:#fff;font-size:11px;padding:4px 10px;border-radius:3px;white-space:nowrap;opacity:0;pointer-events:none;transition:all 0.2s;font-family:var(--pixel);}
+.tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:rgba(0,0,0,0.85);}
+
+/* glowing interactable pulse */
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(232,168,32,0);}50%{box-shadow:0 0 0 4px rgba(232,168,32,0.5);}}
+.hotspot.glow{animation:glow 2s ease-in-out infinite;}
+
+/* ── UI OVERLAY ── */
+#ui{position:absolute;top:0;left:0;right:0;z-index:50;pointer-events:none;}
+#top-bar{background:rgba(20,15,10,0.88);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--accent);}
+#room-name{font-family:var(--vt);font-size:22px;color:var(--gold);letter-spacing:2px;}
+#progress-bar{display:flex;gap:6px;align-items:center;}
+.prog-dot{width:12px;height:12px;border-radius:50%;border:2px solid #888;background:transparent;transition:all 0.3s;}
+.prog-dot.done{background:var(--gold);border-color:var(--gold);box-shadow:0 0 6px var(--gold);}
+.prog-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent);}
+
+/* ── DIALOGUE / POPUP ── */
+#overlay{position:absolute;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);}
+#overlay.show{display:flex;}
+#dialog{background:var(--ui);border:4px solid var(--accent);border-radius:4px;padding:0;max-width:520px;width:90%;font-family:var(--pixel);box-shadow:0 8px 40px rgba(0,0,0,0.7);overflow:hidden;}
+#dialog-title{background:var(--accent);color:#fff;padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;}
+#dialog-close{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;font-family:var(--pixel);}
+#dialog-body{padding:20px 24px;max-height:420px;overflow-y:auto;}
+#dialog-body p{font-size:13px;line-height:1.8;color:var(--text);margin-bottom:12px;}
+#dialog-body .char{color:var(--accent);font-size:20px;margin-right:4px;}
+
+/* input styling inside dialog */
+.d-label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;color:#666;margin:14px 0 5px;text-transform:uppercase;}
+.d-input{width:100%;padding:9px 12px;border:2px solid #ccc;border-radius:3px;font-family:var(--pixel);font-size:13px;color:var(--text);background:#fff;outline:none;transition:border-color 0.2s;}
+.d-input:focus{border-color:var(--accent);}
+.d-btn{display:block;width:100%;margin-top:16px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:3px;font-family:var(--pixel);font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:background 0.2s;}
+.d-btn:hover{background:#b83c10;}
+.d-btn.secondary{background:#888;margin-top:8px;}
+.d-btn.secondary:hover{background:#666;}
+.radio-row{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.radio-row label{display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid #ddd;border-radius:3px;cursor:pointer;font-size:12px;transition:all 0.15s;}
+.radio-row label:hover{border-color:var(--accent);background:#fff5f0;}
+.radio-row label.sel{border-color:var(--accent);background:#fff0eb;}
+.radio-row input{display:none;}
+.err-msg{color:var(--brick);font-size:12px;margin-top:6px;display:none;}
+.ok-msg{color:#3a8a3a;font-size:12px;margin-top:6px;display:none;font-weight:700;}
+
+/* ── NPC speech bubble ── */
+.speech{position:absolute;background:#fff;border:3px solid var(--text);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text);pointer-events:none;white-space:nowrap;animation:pop 0.2s ease;}
+.speech::after{content:'';position:absolute;bottom:-10px;left:16px;border:5px solid transparent;border-top-color:var(--text);}
+@keyframes pop{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ── NPC sprites ── */
+.npc{position:absolute;bottom:228px;cursor:pointer;}
+.npc:hover .speech{display:block;}
+
+/* ── TITLE SCREEN ── */
+#title-screen{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#1a1a2e,#16213e,#0f3460);}
+.title-pixel{font-family:var(--vt);font-size:64px;color:var(--gold);text-shadow:4px 4px 0 var(--accent),8px 8px 0 rgba(0,0,0,0.4);letter-spacing:4px;margin-bottom:8px;text-align:center;}
+.title-sub{font-family:var(--pixel);font-size:13px;color:#aaa;letter-spacing:3px;margin-bottom:48px;text-align:center;}
+.title-btn{background:var(--accent);color:#fff;border:none;padding:14px 40px;font-family:var(--pixel);font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;border-radius:3px;transition:all 0.2s;box-shadow:4px 4px 0 rgba(0,0,0,0.4);}
+.title-btn:hover{background:#b83c10;transform:translate(-1px,-1px);box-shadow:5px 5px 0 rgba(0,0,0,0.4);}
+.title-note{font-size:11px;color:#666;margin-top:20px;font-family:var(--pixel);}
+
+/* ── REVEAL SCREEN ── */
+#reveal-screen{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#1a0000,#2a0a0a);padding:32px;overflow-y:auto;}
+.reveal-title{font-family:var(--vt);font-size:52px;color:#ff4444;text-shadow:3px 3px 0 #880000;letter-spacing:3px;margin-bottom:4px;text-align:center;}
+.reveal-sub{font-family:var(--pixel);font-size:13px;color:#ffaa44;letter-spacing:2px;margin-bottom:28px;text-align:center;}
+.reveal-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,68,68,0.4);border-radius:4px;padding:16px 24px;max-width:700px;width:100%;margin-bottom:12px;}
+.reveal-card h3{font-size:12px;color:#ff8888;letter-spacing:2px;margin-bottom:10px;font-family:var(--pixel);}
+.reveal-row{display:flex;gap:12px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,100,100,0.15);font-size:13px;}
+.reveal-row:last-child{border-bottom:none;}
+.reveal-row .icon{color:#ff4444;font-size:16px;flex-shrink:0;}
+.reveal-row .lbl{color:#ffbbbb;flex:1;}
+.reveal-row .val{color:#ffffff;font-weight:700;flex:1;word-break:break-word;}
+.lesson-card{background:rgba(255,180,0,0.08);border:2px solid rgba(255,180,0,0.4);border-radius:4px;padding:20px 24px;max-width:700px;width:100%;margin-bottom:20px;}
+.lesson-card h3{font-size:13px;color:var(--gold);letter-spacing:1px;margin-bottom:14px;}
+.lesson-card p{font-size:12px;line-height:2;color:#ddd;margin-bottom:6px;}
+.lesson-card strong{color:var(--gold);}
+.play-again{background:transparent;border:2px solid #888;color:#888;padding:10px 32px;font-family:var(--pixel);font-size:13px;cursor:pointer;border-radius:3px;transition:all 0.2s;margin-top:8px;}
+.play-again:hover{border-color:#ccc;color:#ccc;}
+
+/* ── CLOUDS ── */
+.cloud{position:absolute;background:#fff;border-radius:50px;opacity:0.85;}
+.cloud::before,.cloud::after{content:'';position:absolute;background:#fff;border-radius:50%;}
+
+/* ── TREES ── */
+.tree{position:absolute;bottom:220px;}
+.tree-trunk{background:#8B5E3C;position:absolute;bottom:0;}
+.tree-top{background:#3a7a2a;border-radius:50% 50% 40% 40%;position:absolute;}
+
+/* ── LAMP POST ── */
+.lamp{position:absolute;bottom:220px;}
+
+/* ── BENCH ── */
+.bench{position:absolute;bottom:222px;}
+
+/* ── TRANSITION ── */
+#transition{position:absolute;inset:0;background:#000;z-index:150;opacity:0;pointer-events:none;transition:opacity 0.4s;}
+#transition.fade-in{opacity:1;}
+
+/* notebook item */
+.inventory{position:absolute;bottom:10px;right:14px;display:flex;gap:8px;z-index:60;}
+.inv-item{background:rgba(20,15,10,0.8);border:2px solid #666;border-radius:3px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:default;transition:border-color 0.2s;}
+.inv-item.has{border-color:var(--gold);}
+</style>
+</head>
+<body>
+
+<div id="game">
+
+<!-- ══ TITLE SCREEN ══ -->
+<div id="title-screen">
+  <div class="title-pixel">Don't Get Trapped</div>
+  <div class="title-sub">A CYBERSECURITY AWARENESS GAME</div>
+  <button class="title-btn" onclick="startGame()">▶ PLAY</button>
+  <div class="title-note">Point & click to interact with objects and people</div>
+</div>
+
+<!-- ══ REVEAL SCREEN ══ -->
+<div id="reveal-screen">
+  <div class="reveal-title">YOU ESCAPED!</div>
+  <div class="reveal-sub">BUT WE COLLECTED MORE THAN YOU REALISE...</div>
+  <div class="reveal-card" id="reveal-data"></div>
+  <div class="lesson-card">
+    <h3>⚠ HERE'S WHAT JUST HAPPENED</h3>
+    <p>You answered every question because it felt <strong>natural and helpful</strong> — part of the story. This is exactly how social engineering works in real life.</p>
+    <p><strong>Room 1 (Library):</strong> "Pet name" and "school name" are the two most common bank security questions. You handed them over to check out a book.</p>
+    <p><strong>Room 2 (IT Office):</strong> Your birth year + mother's maiden name are enough to reset most online accounts. You gave them to "fix your Wi-Fi".</p>
+    <p><strong>Room 3 (Dorm):</strong> Your nickname, hometown, and password habits let an attacker build a profile and crack or guess your passwords.</p>
+    <p><strong>What to do:</strong> Use a password manager. Lie on security questions (store fake answers in the manager). Question any form that asks for personal info — even if it feels routine.</p>
+  </div>
+  <button class="play-again" onclick="resetGame()">↩ PLAY AGAIN</button>
+</div>
+
+<!-- ══ UI OVERLAY ══ -->
+<div id="ui">
+  <div id="top-bar">
+    <div id="room-name">LIPSCOMB COLLEGE</div>
+    <div id="progress-bar">
+      <span style="font-size:11px;color:#aaa;margin-right:6px;font-family:var(--pixel)">PROGRESS</span>
+      <div class="prog-dot active" id="pd0"></div>
+      <div class="prog-dot" id="pd1"></div>
+      <div class="prog-dot" id="pd2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INVENTORY ══ -->
+<div class="inventory">
+  <div class="inv-item" id="inv-note" title="Student ID">📋</div>
+</div>
+
+<!-- ══ TRANSITION ══ -->
+<div id="transition"></div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- ROOM 1: LIBRARY ENTRANCE              -->
+<!-- ══════════════════════════════════════ -->
+<div class="room active" id="room1">
+  <!-- Sky -->
+  <div class="sky"></div>
+  <!-- Clouds -->
+  <div class="cloud" style="top:30px;left:80px;width:90px;height:28px;"><div style="position:absolute;width:50px;height:46px;border-radius:50%;top:-22px;left:14px;background:#fff;"></div><div style="position:absolute;width:36px;height:36px;border-radius:50%;top:-16px;left:38px;background:#fff;"></div></div>
+  <div class="cloud" style="top:50px;left:580px;width:110px;height:30px;"><div style="position:absolute;width:60px;height:50px;border-radius:50%;top:-26px;left:18px;background:#fff;"></div><div style="position:absolute;width:40px;height:40px;border-radius:50%;top:-18px;left:52px;background:#fff;"></div></div>
+  <!-- Ground -->
+  <div class="ground"></div>
+  <div class="ground-strip"></div>
+  <div class="path"></div>
+  <div class="path-line"></div>
+
+  <!-- Trees -->
+  <div class="tree" style="left:30px;">
+    <div class="tree-top" style="width:70px;height:90px;bottom:36px;left:-10px;background:#2a6a1a;"></div>
+    <div class="tree-top" style="width:56px;height:70px;bottom:56px;left:-3px;"></div>
+    <div class="tree-trunk" style="width:18px;height:40px;left:16px;"></div>
+  </div>
+  <div class="tree" style="left:820px;">
+    <div class="tree-top" style="width:65px;height:82px;bottom:32px;left:-8px;background:#2a6a1a;"></div>
+    <div class="tree-trunk" style="width:16px;height:36px;left:15px;"></div>
+  </div>
+
+  <!-- LIBRARY BUILDING -->
+  <!-- Main body -->
+  <div style="position:absolute;bottom:220px;left:180px;width:540px;height:220px;background:#c8a878;border:3px solid #8a6848;"></div>
+  <!-- Roof / pediment -->
+  <div style="position:absolute;bottom:438px;left:200px;width:500px;height:0;border-left:30px solid transparent;border-right:30px solid transparent;border-bottom:50px solid #a07848;"></div>
+  <div style="position:absolute;bottom:436px;left:230px;width:440px;height:50px;background:#a07848;border:3px solid #806038;"></div>
+  <!-- Columns -->
+  <div class="column" style="bottom:220px;left:240px;width:24px;height:200px;"></div>
+  <div class="column" style="bottom:220px;left:310px;width:24px;height:200px;"></div>
+  <div class="column" style="bottom:220px;left:380px;width:24px;height:200px;"></div>
+  <div class="column" style="bottom:220px;left:450px;width:24px;height:200px;"></div>
+  <div class="column" style="bottom:220px;left:520px;width:24px;height:200px;"></div>
+  <div class="column" style="bottom:220px;left:590px;width:24px;height:200px;"></div>
+  <!-- Steps -->
+  <div style="position:absolute;bottom:212px;left:220px;width:460px;height:10px;background:#b09868;"></div>
+  <div style="position:absolute;bottom:203px;left:200px;width:500px;height:10px;background:#a08858;"></div>
+  <!-- Windows -->
+  <div class="window-pane lit" style="bottom:320px;left:220px;width:70px;height:55px;"></div>
+  <div class="window-pane" style="bottom:320px;left:320px;width:70px;height:55px;"></div>
+  <div class="window-pane lit" style="bottom:320px;left:530px;width:70px;height:55px;"></div>
+  <div class="window-pane" style="bottom:320px;left:630px;width:70px;height:55px;"></div>
+  <!-- Sign -->
+  <div class="sign" style="bottom:460px;left:330px;width:240px;height:28px;font-size:13px;">BEAMAN LIBRARY</div>
+  <!-- Door -->
+  <div class="door" style="bottom:220px;left:395px;width:110px;height:130px;border-radius:4px 4px 0 0;"></div>
+  <div style="position:absolute;bottom:220px;left:395px;width:110px;height:130px;border-radius:4px 4px 0 0;border:3px solid #2a0a00;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;"><div style="width:8px;height:8px;border-radius:50%;background:#c8956a;"></div></div>
+
+  <!-- Bench -->
+  <div style="position:absolute;bottom:230px;left:100px;">
+    <div style="width:70px;height:8px;background:#a07840;border:2px solid #704820;border-radius:2px;"></div>
+    <div style="width:70px;height:6px;background:#a07840;border:2px solid #704820;border-radius:2px;margin-top:10px;"></div>
+    <div style="position:absolute;top:0;left:6px;width:6px;height:24px;background:#704820;"></div>
+    <div style="position:absolute;top:0;right:6px;width:6px;height:24px;background:#704820;"></div>
+  </div>
+
+  <!-- Lamp post -->
+  <div style="position:absolute;bottom:220px;left:158px;width:6px;height:110px;background:#4a4a4a;"></div>
+  <div style="position:absolute;bottom:328px;left:142px;width:30px;height:5px;background:#4a4a4a;"></div>
+  <div style="position:absolute;bottom:326px;left:140px;width:16px;height:14px;background:#ffe880;border-radius:2px;box-shadow:0 0 10px rgba(255,220,80,0.7);"></div>
+
+  <!-- HOTSPOTS -->
+  <!-- NPC: Librarian outside -->
+  <div class="hotspot glow" id="hs-librarian" style="bottom:228px;left:680px;width:52px;height:90px;" onclick="openDialog('librarian')">
+    <div class="tooltip">Talk to Librarian</div>
+    <!-- pixel person -->
+    <div style="width:24px;height:24px;background:#f5c090;border-radius:50%;margin:0 auto;border:2px solid #c07040;"></div>
+    <div style="width:36px;height:12px;background:#2244aa;margin:2px auto 0;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#2244aa;margin:0 auto;border-radius:2px;"></div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#1a3388;border-radius:2px;"></div><div style="width:12px;height:28px;background:#1a3388;border-radius:2px;"></div></div>
+  </div>
+
+  <!-- Notice board -->
+  <div class="hotspot glow" id="hs-notice" style="bottom:280px;left:820px;width:54px;height:70px;" onclick="openDialog('notice')">
+    <div class="tooltip">Notice Board</div>
+    <div style="width:54px;height:70px;background:#c8956a;border:3px solid #8a5030;border-radius:2px;padding:4px;">
+      <div style="background:#fff8e8;height:100%;border:1px solid #c89040;padding:3px;">
+        <div style="height:4px;background:#888;margin-bottom:3px;border-radius:1px;"></div>
+        <div style="height:4px;background:#aaa;margin-bottom:3px;border-radius:1px;width:80%;"></div>
+        <div style="height:4px;background:#888;margin-bottom:3px;border-radius:1px;width:90%;"></div>
+        <div style="height:4px;background:#d44;border-radius:1px;width:60%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library door -->
+  <div class="hotspot" id="hs-door1" style="bottom:220px;left:395px;width:110px;height:130px;cursor:not-allowed;" onclick="tryDoor1()">
+    <div class="tooltip" id="door1-tip">Door is locked</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- ROOM 2: IT OFFICE                     -->
+<!-- ══════════════════════════════════════ -->
+<div class="room" id="room2">
+  <!-- Interior room -->
+  <div style="position:absolute;inset:0;background:#d4c8a4;"></div>
+  <!-- Floor -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:200px;background:#a89060;"></div>
+  <!-- Floor tiles -->
+  <svg style="position:absolute;bottom:0;left:0;width:900px;height:200px;opacity:0.3" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="tile" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="none" stroke="#8a7040" stroke-width="1"/></pattern></defs><rect width="900" height="200" fill="url(#tile)"/></svg>
+  <!-- Back wall -->
+  <div style="position:absolute;top:0;left:0;right:0;height:360px;background:#e8dfc0;border-bottom:6px solid #a89060;"></div>
+  <!-- Wall trim -->
+  <div style="position:absolute;top:200px;left:0;right:0;height:8px;background:#c8b880;"></div>
+
+  <!-- Posters on wall -->
+  <div style="position:absolute;top:40px;left:40px;width:100px;height:140px;background:#fff;border:4px solid #8a6030;padding:6px;">
+    <div style="background:#1a3a6a;height:80px;display:flex;align-items:center;justify-content:center;color:#7ec8e3;font-size:9px;font-weight:700;text-align:center;padding:4px;">CYBER<br>SECURITY<br>WEEK</div>
+    <div style="font-size:8px;margin-top:4px;color:#333;text-align:center;">Think before you click!</div>
+  </div>
+
+  <!-- Window -->
+  <div style="position:absolute;top:40px;left:700px;width:160px;height:120px;background:var(--sky);border:6px solid #8a6030;"></div>
+  <div style="position:absolute;top:40px;left:779px;width:4px;height:120px;background:#8a6030;"></div>
+  <div style="position:absolute;top:100px;left:700px;height:4px;width:160px;background:#8a6030;"></div>
+
+  <!-- Desk -->
+  <div style="position:absolute;bottom:190px;left:100px;width:340px;height:20px;background:#8a5828;border:3px solid #5a3810;border-radius:2px;"></div>
+  <div style="position:absolute;bottom:145px;left:105px;width:330px;height:50px;background:#a06838;border:2px solid #5a3810;"></div>
+  <div style="position:absolute;bottom:145px;left:100px;width:14px;height:52px;background:#7a4820;"></div>
+  <div style="position:absolute;bottom:145px;left:426px;width:14px;height:52px;background:#7a4820;"></div>
+
+  <!-- Computer on desk -->
+  <div style="position:absolute;bottom:208px;left:160px;width:120px;height:80px;background:#2a2a2a;border:3px solid #111;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+    <div style="width:100px;height:64px;background:#0a2a1a;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--vt);font-size:10px;color:#00ff88;text-align:center;padding:4px;">IT HELP DESK<br>SYSTEM v3.2</div>
+  </div>
+  <div style="position:absolute;bottom:205px;left:210px;width:20px;height:6px;background:#2a2a2a;"></div>
+  <div style="position:absolute;bottom:200px;left:195px;width:50px;height:8px;background:#333;border-radius:2px;"></div>
+
+  <!-- Filing cabinet -->
+  <div style="position:absolute;bottom:200px;left:560px;width:80px;height:140px;background:#8a8a7a;border:3px solid #5a5a4a;border-radius:2px;">
+    <div style="margin:8px auto;width:60px;height:36px;background:#7a7a6a;border:2px solid #5a5a4a;border-radius:1px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#333;">STUDENT<br>FILES</div>
+    <div style="margin:4px auto;width:60px;height:36px;background:#7a7a6a;border:2px solid #5a5a4a;border-radius:1px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#333;">NETWORK<br>ACCESS</div>
+    <div style="margin:4px auto;width:60px;height:36px;background:#7a7a6a;border:2px solid #5a5a4a;border-radius:1px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#333;">ACCOUNTS</div>
+  </div>
+
+  <!-- Whiteboard -->
+  <div style="position:absolute;top:30px;left:250px;width:320px;height:160px;background:#f0f4e8;border:6px solid #8a6030;border-radius:3px;">
+    <div style="padding:10px;font-size:9px;color:#334;line-height:1.8;font-family:var(--pixel);">
+      <span style="color:#a03020">NETWORK OUTAGE:</span> WiFi<br>
+      SSID: BEAMANSecure<br>
+      <span style="color:#2244aa">→ See IT staff for help</span><br>
+      <span style="color:#336622">✓ All accounts verified</span>
+    </div>
+  </div>
+
+  <!-- NPC: IT Guy -->
+  <div class="hotspot glow" id="hs-itguy" style="bottom:198px;left:340px;width:52px;height:90px;" onclick="openDialog('itguy')">
+    <div class="tooltip">Talk to IT Staff</div>
+    <div style="width:24px;height:24px;background:#e8b07a;border-radius:50%;margin:0 auto;border:2px solid #b07848;"></div>
+    <div style="width:36px;height:12px;background:#334;margin:2px auto 0;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#334;margin:0 auto;border-radius:2px;position:relative;">
+      <div style="position:absolute;top:8px;left:8px;width:24px;height:14px;background:#fff;border-radius:2px;font-size:6px;display:flex;align-items:center;justify-content:center;color:#333;">IT</div>
+    </div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div></div>
+  </div>
+
+  <!-- Exit door (to room 3) -->
+  <div style="position:absolute;bottom:200px;right:0;width:80px;height:160px;background:#7a4820;border:4px solid #4a2808;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;"><div style="width:10px;height:10px;border-radius:50%;background:#c8956a;"></div></div>
+  <div class="hotspot" id="hs-door2" style="bottom:200px;right:0;width:80px;height:160px;cursor:not-allowed;" onclick="tryDoor2()">
+    <div class="tooltip" id="door2-tip">Door is locked</div>
+  </div>
+
+  <!-- Back to room 1 arrow -->
+  <div class="hotspot" style="bottom:220px;left:0;width:60px;height:80px;" onclick="goToRoom(1)">
+    <div class="tooltip">← Exit</div>
+    <div style="font-size:28px;color:#888;padding:22px 10px;">◀</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- ROOM 3: STUDENT DORM HALLWAY          -->
+<!-- ══════════════════════════════════════ -->
+<div class="room" id="room3">
+  <!-- Interior corridor -->
+  <div style="position:absolute;inset:0;background:#c8b89a;"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:200px;background:#8a7050;"></div>
+  <!-- Carpet strip -->
+  <div style="position:absolute;bottom:60px;left:0;right:0;height:80px;background:#6a4a7a;opacity:0.7;"></div>
+  <!-- Ceiling -->
+  <div style="position:absolute;top:0;left:0;right:0;height:80px;background:#b8a888;border-bottom:6px solid #a09070;"></div>
+
+  <!-- Ceiling lights -->
+  <div style="position:absolute;top:72px;left:200px;width:40px;height:10px;background:#ffe890;border-radius:2px;box-shadow:0 0 16px rgba(255,230,100,0.8);"></div>
+  <div style="position:absolute;top:72px;left:500px;width:40px;height:10px;background:#ffe890;border-radius:2px;box-shadow:0 0 16px rgba(255,230,100,0.8);"></div>
+  <div style="position:absolute;top:72px;left:740px;width:40px;height:10px;background:#ffe890;border-radius:2px;box-shadow:0 0 16px rgba(255,230,100,0.8);"></div>
+
+  <!-- Lockers / doors along wall -->
+  <div style="position:absolute;top:80px;left:0;right:0;height:280px;background:#c0b090;border-bottom:4px solid #a09070;"></div>
+  <!-- Door 301 -->
+  <div style="position:absolute;top:100px;left:60px;width:90px;height:160px;background:#8a5830;border:4px solid #5a3810;border-radius:4px 4px 0 0;">
+    <div style="position:absolute;top:20px;left:8px;width:74px;height:100px;background:#6a4020;border:2px solid #4a2808;border-radius:2px;"></div>
+    <div style="position:absolute;top:50%;right:8px;width:10px;height:10px;border-radius:50%;background:#c8956a;transform:translateY(-50%);"></div>
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:10px;color:#e8c890;font-family:var(--pixel);">301</div>
+  </div>
+  <!-- Door 302 -->
+  <div style="position:absolute;top:100px;left:200px;width:90px;height:160px;background:#7a4820;border:4px solid #5a3810;border-radius:4px 4px 0 0;">
+    <div style="position:absolute;top:20px;left:8px;width:74px;height:100px;background:#5a3010;border:2px solid #3a1800;border-radius:2px;"></div>
+    <div style="position:absolute;top:50%;right:8px;width:10px;height:10px;border-radius:50%;background:#c8956a;transform:translateY(-50%);"></div>
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:10px;color:#e8c890;font-family:var(--pixel);">302</div>
+  </div>
+  <!-- Door 303 (player's room - target) -->
+  <div style="position:absolute;top:100px;left:380px;width:90px;height:160px;background:#5a7a30;border:4px solid #3a5818;border-radius:4px 4px 0 0;">
+    <div style="position:absolute;top:20px;left:8px;width:74px;height:100px;background:#4a6820;border:2px solid #2a4808;border-radius:2px;"></div>
+    <div style="position:absolute;top:50%;right:8px;width:10px;height:10px;border-radius:50%;background:#c8956a;transform:translateY(-50%);"></div>
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:10px;color:#e8f8d0;font-family:var(--pixel);">303</div>
+  </div>
+  <!-- Bulletin board -->
+  <div style="position:absolute;top:100px;left:560px;width:140px;height:100px;background:#c8956a;border:4px solid #8a5030;border-radius:2px;padding:6px;">
+    <div style="background:#fff8e8;height:100%;padding:5px;font-size:8px;color:#333;line-height:1.6;font-family:var(--pixel);border:1px solid #c89040;">
+      LOST: Black laptop<br>Rm 305 - call x4421<br><span style="color:#a03">WiFi PASSWORD<br>changed - see RA</span>
+    </div>
+  </div>
+  <!-- Vending machine -->
+  <div style="position:absolute;top:88px;left:720px;width:70px;height:180px;background:#2244aa;border:3px solid #1a3388;border-radius:3px;">
+    <div style="margin:8px auto;width:54px;height:90px;background:#aad4e8;border:2px solid #88b8d0;display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px;">
+      <div style="background:#f88;border-radius:1px;"></div><div style="background:#8f8;border-radius:1px;"></div>
+      <div style="background:#88f;border-radius:1px;"></div><div style="background:#ff8;border-radius:1px;"></div>
+      <div style="background:#f88;border-radius:1px;"></div><div style="background:#8f8;border-radius:1px;"></div>
+    </div>
+    <div style="margin:4px auto;width:40px;height:20px;background:#000;border:2px solid #444;border-radius:2px;"></div>
+  </div>
+
+  <!-- NPC: Roommate -->
+  <div class="hotspot glow" id="hs-roommate" style="bottom:198px;left:450px;width:52px;height:90px;" onclick="openDialog('roommate')">
+    <div class="tooltip">Talk to Roommate</div>
+    <div style="width:24px;height:24px;background:#f0c090;border-radius:50%;margin:0 auto;border:2px solid #c07840;"></div>
+    <div style="width:20px;height:10px;background:#f0a060;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
+    <div style="width:36px;height:12px;background:#aa3322;margin:0 auto;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#aa3322;margin:0 auto;border-radius:2px;"></div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#882211;border-radius:2px;"></div><div style="width:12px;height:28px;background:#882211;border-radius:2px;"></div></div>
+  </div>
+
+  <!-- Exit door (escape!) -->
+  <div style="position:absolute;bottom:200px;right:0;width:80px;height:160px;background:#5a7a30;border:4px solid #3a5818;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;">
+    <div style="font-size:9px;color:#d4f090;text-align:center;font-family:var(--pixel);">EXIT<br>→</div>
+  </div>
+  <div class="hotspot" id="hs-exit" style="bottom:200px;right:0;width:80px;height:160px;cursor:not-allowed;" onclick="tryExit()">
+    <div class="tooltip" id="exit-tip">You need the door code</div>
+  </div>
+
+  <!-- Back arrow -->
+  <div class="hotspot" style="bottom:220px;left:0;width:60px;height:80px;" onclick="goToRoom(2)">
+    <div class="tooltip">← Back</div>
+    <div style="font-size:28px;color:#888;padding:22px 10px;">◀</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- DIALOGUE OVERLAY                      -->
+<!-- ══════════════════════════════════════ -->
+<div id="overlay">
+  <div id="dialog">
+    <div id="dialog-title">
+      <span id="dialog-title-text">NPC</span>
+      <button id="dialog-close" onclick="closeDialog()">✕</button>
+    </div>
+    <div id="dialog-body"></div>
+  </div>
+</div>
+
+</div><!-- #game -->
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const state = {
+  room: 1,
+  room1Done: false,
+  room2Done: false,
+  room3Done: false,
+  answers: {},
+  librarianTalked: false,
+  itguyTalked: false,
+  roommateTalked: false,
+};
+
+// ═══════════════════════════════════════════
+// FIREBASE
+// ═══════════════════════════════════════════
+let FIREBASE_URL = localStorage.getItem('fb_url') || '';
+let sessionId = localStorage.getItem('session_id') || genId();
+localStorage.setItem('session_id', sessionId);
+function genId(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+
+async function fbSave(key, val){
+  if(!FIREBASE_URL) return;
+  try{
+    await fetch(`${FIREBASE_URL}/sessions/${sessionId}/${key}.json`,{
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({answer:val, ts:Date.now()})
+    });
+  }catch(e){ console.warn('Firebase:', e); }
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function startGame(){
+  document.getElementById('title-screen').style.display='none';
+  setRoom(1);
+}
+
+function goToRoom(n){ fadeTransition(()=>setRoom(n)); }
+
+function setRoom(n){
+  state.room = n;
+  document.querySelectorAll('.room').forEach(r=>r.classList.remove('active'));
+  document.getElementById('room'+n).classList.add('active');
+  const names = ['','BEAMAN LIBRARY','IT SERVICES OFFICE','STUDENT DORMS — FLOOR 3'];
+  document.getElementById('room-name').textContent = names[n];
+  updateProgress();
+}
+
+function fadeTransition(cb){
+  const t = document.getElementById('transition');
+  t.classList.add('fade-in');
+  setTimeout(()=>{ cb(); t.classList.remove('fade-in'); }, 400);
+}
+
+function updateProgress(){
+  [0,1,2].forEach(i=>{
+    const d = document.getElementById('pd'+i);
+    d.className = 'prog-dot';
+    if(i < state.room-1) d.classList.add('done');
+    else if(i === state.room-1) d.classList.add('active');
+  });
+}
+
+// ═══════════════════════════════════════════
+// DIALOG SYSTEM
+// ═══════════════════════════════════════════
+function openDialog(id){ buildDialog(id); document.getElementById('overlay').classList.add('show'); }
+function closeDialog(){ document.getElementById('overlay').classList.remove('show'); }
+
+document.getElementById('overlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('overlay')) closeDialog();
+});
+
+function buildDialog(id){
+  const title = document.getElementById('dialog-title-text');
+  const body = document.getElementById('dialog-body');
+
+  const dialogs = {
+
+    // ── NOTICE BOARD ──────────────────────────
+    notice: ()=>{
+      title.textContent = '📌 NOTICE BOARD';
+      body.innerHTML = `
+        <p><strong>LIBRARY BORROWING SYSTEM UPDATE</strong></p>
+        <p>Due to the recent security incident, all library accounts have been reset. To borrow books, students must re-verify their identity at the front desk.</p>
+        <p style="color:#a03020"><strong>REMINDER:</strong> The library door lock code has changed. Speak to the librarian to get access.</p>
+        <button class="d-btn secondary" onclick="closeDialog()">Close</button>`;
+    },
+
+    // ── LIBRARIAN ─────────────────────────────
+    librarian: ()=>{
+      if(state.room1Done){
+        title.textContent = '👩 LIBRARIAN';
+        body.innerHTML = `<p>"Thanks again! Here's the door code: <strong>OPEN</strong>. Head on through — the IT office is on the second floor, they can sort your Wi-Fi."</p><button class="d-btn secondary" onclick="closeDialog()">Thanks!</button>`;
+        return;
+      }
+      title.textContent = '👩 LIBRARIAN';
+      body.innerHTML = `
+        <p><em>"Oh hello! Are you trying to get into the library? Our system had a security update last night and I need to re-verify all student accounts. It'll only take a sec!"</em></p>
+        <p><em>"Just a couple of security questions — standard stuff."</em></p>
+        <label class="d-label">What was the name of your first pet?</label>
+        <input class="d-input" id="q-pet" type="text" placeholder="Pet name...">
+        <label class="d-label">What primary school did you attend?</label>
+        <input class="d-input" id="q-school" type="text" placeholder="School name...">
+        <div class="err-msg" id="err1">Please fill in both fields!</div>
+        <div class="ok-msg" id="ok1">✓ Account verified! Door unlocked.</div>
+        <button class="d-btn" onclick="submitRoom1()">Submit Answers</button>`;
+    },
+
+    // ── IT GUY ────────────────────────────────
+    itguy: ()=>{
+      if(state.room2Done){
+        title.textContent = '👨‍💻 IT STAFF';
+        body.innerHTML = `<p>"All sorted! Your Wi-Fi should be working now. The dorms are just down the hall — door code is <strong>DORM3</strong>."</p><button class="d-btn secondary" onclick="closeDialog()">Thanks!</button>`;
+        return;
+      }
+      title.textContent = '👨‍💻 IT STAFF — HELP DESK';
+      body.innerHTML = `
+        <p><em>"Hey there! Wi-Fi issues? Yeah, we had a big reset last night. I just need to pull up your student record to reconnect your devices. Give me your details and I'll sort it."</em></p>
+        <label class="d-label">Your mother's maiden name (for account lookup)</label>
+        <input class="d-input" id="q-maiden" type="text" placeholder="Maiden name...">
+        <label class="d-label">Your birth year (to confirm identity)</label>
+        <input class="d-input" id="q-birth" type="text" placeholder="e.g. 2001">
+        <div class="err-msg" id="err2">Please fill in both fields!</div>
+        <div class="ok-msg" id="ok2">✓ Account found! Reconnecting your devices...</div>
+        <button class="d-btn" onclick="submitRoom2()">Submit Details</button>`;
+    },
+
+    // ── ROOMMATE ──────────────────────────────
+    roommate: ()=>{
+      if(state.room3Done){
+        title.textContent = '🧑 ROOMMATE';
+        body.innerHTML = `<p>"You're all good! Exit's unlocked. Oh — and seriously, change your password after this. I feel bad asking all that stuff ha."</p><button class="d-btn secondary" onclick="closeDialog()">See ya!</button>`;
+        return;
+      }
+      title.textContent = '🧑 YOUR ROOMMATE';
+      body.innerHTML = `
+        <p><em>"Oh thank god you're here! Some guy in the hallway needs to verify who lives in room 303 — there was apparently a package mix-up? He just needs a couple details to update the dorm register."</em></p>
+        <p><em>"Also our door code changed, I'll tell you once you help me fill this form out. It's for both of us."</em></p>
+        <label class="d-label">Your nickname or username people know you by</label>
+        <input class="d-input" id="q-nick" type="text" placeholder="Nickname / username...">
+        <label class="d-label">Your hometown / city you grew up in</label>
+        <input class="d-input" id="q-hometown" type="text" placeholder="City name...">
+        <label class="d-label">How do you usually make your passwords?</label>
+        <div class="radio-row" id="rg-pw">
+          <label onclick="selRadio(this,'rg-pw')"><input type="radio" name="pw" value="Name + numbers (e.g. sarah1998)"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> Name + numbers (e.g. sarah1998)</label>
+          <label onclick="selRadio(this,'rg-pw')"><input type="radio" name="pw" value="Random words strung together"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> Random words strung together</label>
+          <label onclick="selRadio(this,'rg-pw')"><input type="radio" name="pw" value="Keyboard pattern (qwerty, 123456)"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> Keyboard pattern (qwerty, 123456)</label>
+          <label onclick="selRadio(this,'rg-pw')"><input type="radio" name="pw" value="Password manager / random characters"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> Password manager / random characters</label>
+        </div>
+        <div class="err-msg" id="err3">Please fill in all fields!</div>
+        <div class="ok-msg" id="ok3">✓ Thanks! Door code is: EXIT</div>
+        <button class="d-btn" onclick="submitRoom3()">Submit Form</button>`;
+    },
+
+    // ── FIREBASE SETUP ────────────────────────
+    firebase: ()=>{
+      title.textContent = '⚙ FIREBASE SETUP (OPTIONAL)';
+      body.innerHTML = `
+        <p>To save player answers to Firebase, enter your Realtime Database URL. Get it free at <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a>.</p>
+        <label class="d-label">Firebase Realtime Database URL</label>
+        <input class="d-input" id="fb-input" type="text" placeholder="https://YOUR-PROJECT-default-rtdb.firebaseio.com" value="${FIREBASE_URL}">
+        <button class="d-btn" onclick="saveFb()">Save URL</button>
+        <button class="d-btn secondary" onclick="closeDialog()">Skip</button>`;
+    }
+  };
+
+  if(dialogs[id]) dialogs[id]();
+}
+
+// ═══════════════════════════════════════════
+// RADIO HELPER
+// ═══════════════════════════════════════════
+function selRadio(el, group){
+  document.querySelectorAll(`#${group} label`).forEach(l=>l.classList.remove('sel'));
+  el.classList.add('sel');
+  el.querySelector('input').checked = true;
+}
+
+// ═══════════════════════════════════════════
+// ROOM SUBMISSIONS
+// ═══════════════════════════════════════════
+function submitRoom1(){
+  const pet = document.getElementById('q-pet')?.value.trim();
+  const school = document.getElementById('q-school')?.value.trim();
+  if(!pet || !school){ show('err1'); return; }
+  hide('err1'); show('ok1');
+  state.answers.first_pet_name = pet;
+  state.answers.primary_school = school;
+  fbSave('first_pet_name', pet);
+  fbSave('primary_school', school);
+  state.room1Done = true;
+  // Unlock door
+  const door = document.getElementById('hs-door1');
+  door.style.cursor = 'pointer';
+  door.onclick = ()=>goToRoom(2);
+  document.getElementById('door1-tip').textContent = 'Enter Library → IT Office';
+  setTimeout(closeDialog, 1200);
+}
+
+function submitRoom2(){
+  const maiden = document.getElementById('q-maiden')?.value.trim();
+  const birth = document.getElementById('q-birth')?.value.trim();
+  if(!maiden || !birth){ show('err2'); return; }
+  hide('err2'); show('ok2');
+  state.answers.mothers_maiden_name = maiden;
+  state.answers.birth_year = birth;
+  fbSave('mothers_maiden_name', maiden);
+  fbSave('birth_year', birth);
+  state.room2Done = true;
+  const door = document.getElementById('hs-door2');
+  door.style.cursor = 'pointer';
+  door.onclick = ()=>goToRoom(3);
+  document.getElementById('door2-tip').textContent = 'Go to Student Dorms →';
+  setTimeout(closeDialog, 1200);
+}
+
+function submitRoom3(){
+  const nick = document.getElementById('q-nick')?.value.trim();
+  const home = document.getElementById('q-hometown')?.value.trim();
+  const pw = document.querySelector('input[name="pw"]:checked')?.value;
+  if(!nick || !home || !pw){ show('err3'); return; }
+  hide('err3'); show('ok3');
+  state.answers.nickname = nick;
+  state.answers.hometown = home;
+  state.answers.password_habit = pw;
+  fbSave('nickname', nick);
+  fbSave('hometown', home);
+  fbSave('password_habit', pw);
+  state.room3Done = true;
+  const exit = document.getElementById('hs-exit');
+  exit.style.cursor = 'pointer';
+  exit.onclick = showReveal;
+  document.getElementById('exit-tip').textContent = 'EXIT — You escaped!';
+  setTimeout(closeDialog, 1400);
+}
+
+// ═══════════════════════════════════════════
+// DOOR LOCK MESSAGES
+// ═══════════════════════════════════════════
+function tryDoor1(){
+  if(!state.room1Done){ openDialog('librarian'); }
+}
+function tryDoor2(){
+  if(!state.room2Done){ openDialog('itguy'); }
+}
+function tryExit(){
+  if(!state.room3Done){ openDialog('roommate'); }
+}
+
+// ═══════════════════════════════════════════
+// REVEAL
+// ═══════════════════════════════════════════
+function showReveal(){
+  closeDialog();
+  const screen = document.getElementById('reveal-screen');
+  screen.style.display = 'flex';
+
+  const labels = {
+    first_pet_name:      ["First pet's name",          "Room 1 — Library"],
+    primary_school:      ["Primary school attended",   "Room 1 — Library"],
+    mothers_maiden_name: ["Mother's maiden name",       "Room 2 — IT Office"],
+    birth_year:          ["Birth year",                "Room 2 — IT Office"],
+    nickname:            ["Online nickname / username", "Room 3 — Dorms"],
+    hometown:            ["Hometown / city",           "Room 3 — Dorms"],
+    password_habit:      ["Password habit",            "Room 3 — Dorms"],
+  };
+
+  let html = '<h3 style="font-family:var(--pixel);color:#ff8888;font-size:12px;letter-spacing:2px;margin-bottom:12px;">DATA COLLECTED DURING YOUR ESCAPE</h3>';
+  for(const [key, meta] of Object.entries(labels)){
+    if(state.answers[key]){
+      html += `<div class="reveal-row">
+        <span class="icon">✗</span>
+        <span class="lbl">${meta[0]} <span style="font-size:11px;color:#888">[${meta[1]}]</span></span>
+        <span class="val">${esc(state.answers[key])}</span>
+      </div>`;
+    }
+  }
+  document.getElementById('reveal-data').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function show(id){ const e=document.getElementById(id); if(e) e.style.display='block'; }
+function hide(id){ const e=document.getElementById(id); if(e) e.style.display='none'; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function saveFb(){
+  const v = document.getElementById('fb-input')?.value.trim().replace(/\/$/,'');
+  if(v && v.startsWith('https://')){
+    FIREBASE_URL = v;
+    localStorage.setItem('fb_url', v);
+    closeDialog();
+  }
+}
+
+function resetGame(){
+  Object.keys(state).forEach(k=>{
+    if(typeof state[k]==='boolean') state[k]=false;
+    if(k==='answers') state[k]={};
+  });
+  state.room=1;
+  sessionId = genId();
+  localStorage.setItem('session_id', sessionId);
+  document.getElementById('reveal-screen').style.display='none';
+  // Reset doors
+  const d1=document.getElementById('hs-door1');
+  d1.style.cursor='not-allowed'; d1.onclick=tryDoor1;
+  document.getElementById('door1-tip').textContent='Door is locked';
+  const d2=document.getElementById('hs-door2');
+  d2.style.cursor='not-allowed'; d2.onclick=tryDoor2;
+  document.getElementById('door2-tip').textContent='Door is locked';
+  const ex=document.getElementById('hs-exit');
+  ex.style.cursor='not-allowed'; ex.onclick=tryExit;
+  document.getElementById('exit-tip').textContent='You need the door code';
+  document.getElementById('title-screen').style.display='flex';
+}
+
+// ═══════════════════════════════════════════
+// FIREBASE SETUP BUTTON (gear icon)
+// ═══════════════════════════════════════════
+// Small gear button in corner
+const gear = document.createElement('button');
+gear.textContent = '⚙';
+gear.title = 'Firebase Setup';
+gear.style.cssText = 'position:absolute;bottom:12px;left:12px;z-index:60;background:rgba(20,15,10,0.7);border:1px solid #555;color:#aaa;width:32px;height:32px;font-size:16px;cursor:pointer;border-radius:3px;';
+gear.onclick = ()=>openDialog('firebase');
+document.getElementById('game').appendChild(gear);
+</script>
+</body>
+</html>
