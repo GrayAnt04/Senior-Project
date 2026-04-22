@@ -14,10 +14,11 @@
   --text:#2a1a0a;--ui:#fffdf5;--accent:#d4541a;--gold:#e8a820;
   --shadow:rgba(0,0,0,0.35);--pixel:'Pixelify Sans',monospace;--vt:'VT323',monospace;
 }
-body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:var(--pixel);overflow:hidden;}
+body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;font-family:var(--pixel);overflow:hidden;}
 
 /* ── GAME WRAPPER ── */
-#game{position:relative;width:900px;height:560px;overflow:hidden;border:4px solid #333;box-shadow:0 0 60px rgba(0,0,0,0.8),0 0 120px rgba(0,0,0,0.4);}
+#game-outer{display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;height:100dvh;}
+#game{position:relative;width:900px;height:560px;overflow:hidden;border:4px solid #333;box-shadow:0 0 60px rgba(0,0,0,0.8),0 0 120px rgba(0,0,0,0.4);transform-origin:center center;flex-shrink:0;}
 
 /* ── CANVAS (each room is a <div> scene) ── */
 .room{position:absolute;inset:0;display:none;}
@@ -146,10 +147,22 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
 .inventory{position:absolute;bottom:10px;right:14px;display:flex;gap:8px;z-index:60;}
 .inv-item{background:rgba(20,15,10,0.8);border:2px solid #666;border-radius:3px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:default;transition:border-color 0.2s;}
 .inv-item.has{border-color:var(--gold);}
+
+/* ── MOBILE ── */
+@media (max-width: 920px){
+  body{overflow:hidden;touch-action:none;}
+  #dialog{max-width:96vw;max-height:85vh;overflow-y:auto;}
+  #dialog-body{max-height:65vh;}
+  .d-input{font-size:16px;}/* prevent iOS zoom on focus */
+  .radio-row label{padding:12px 10px;font-size:13px;}
+  .d-btn{padding:14px;font-size:14px;}
+  .tooltip{display:none;}/* tooltips don't work on touch */
+}
 </style>
 </head>
 <body>
 
+<div id="game-outer">
 <div id="game">
 
 <!-- ══ TITLE SCREEN ══ -->
@@ -176,7 +189,7 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
     <p><strong>Room 6 (Computer Lab):</strong> You handed over a live username and password to a stranger. If you reuse that password elsewhere, every account using it is now compromised.</p>
     <p><strong>Room 7 (Bennett Center):</strong> Your club membership and graduation year help build a detailed profile used for targeted phishing or impersonation.</p>
     <p><strong>Room 8 (Starbucks):</strong> Your email and birthday are enough to access loyalty accounts, reset passwords, and identify you across platforms.</p>
-    <p><strong>Room 9 (Dining Hall):</strong> Your meal plan ID accesses your account balance, and your allergy info is sensitive medical data that should never be casually shared.</p> Never reuse passwords. Lie on security questions. Question any form that asks for personal info — even if the person seems official.</p>
+    <p><strong>Room 9 (Dining Hall):</strong> Knowing whether you have a meal plan tells attackers you're a student with campus account access. Combined with your other details, it helps them impersonate you to campus services. Your allergy info is also sensitive medical data that should never be casually shared.</p> Never reuse passwords. Lie on security questions. Question any form that asks for personal info — even if the person seems official.</p>
   </div>
   <button class="play-again" onclick="resetGame()">↩ PLAY AGAIN</button>
 </div>
@@ -393,6 +406,18 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
     </div>
   </div>
 
+  <!-- NPC: Receptionist -->
+  <div class="hotspot glow" id="hs-receptionist" style="bottom:198px;left:360px;width:52px;height:90px;" onclick="openDialog('receptionist')">
+    <div class="tooltip">Talk to Receptionist</div>
+    <div style="width:24px;height:24px;background:#f8d0a0;border-radius:50%;margin:0 auto;border:2px solid #c09060;"></div>
+    <div style="width:24px;height:8px;background:#8b1a1a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
+    <div style="width:36px;height:12px;background:#336688;margin:0 auto;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#336688;margin:0 auto;border-radius:2px;position:relative;">
+      <div style="position:absolute;top:8px;left:9px;width:22px;height:12px;background:#fff;border-radius:1px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#333;">ID</div>
+    </div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#224466;border-radius:2px;"></div><div style="width:12px;height:28px;background:#224466;border-radius:2px;"></div></div>
+  </div>
+
   <!-- Reception desk -->
   <div style="position:absolute;bottom:190px;left:200px;width:400px;height:22px;background:#6a6858;border:3px solid #4a4840;border-radius:2px;"></div>
   <div style="position:absolute;bottom:148px;left:205px;width:390px;height:48px;background:#7a7868;border:2px solid #4a4840;"></div>
@@ -406,18 +431,6 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;bottom:202px;left:288px;width:44px;height:7px;background:#333;border-radius:1px;"></div>
   <!-- Desk sign -->
   <div style="position:absolute;bottom:213px;left:390px;width:100px;height:18px;background:#e8a820;border:2px solid #a87810;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--pixel);color:#3a2a00;">FRONT DESK</div>
-
-  <!-- NPC: Receptionist -->
-  <div class="hotspot glow" id="hs-receptionist" style="bottom:198px;left:460px;width:52px;height:90px;" onclick="openDialog('receptionist')">
-    <div class="tooltip">Talk to Receptionist</div>
-    <div style="width:24px;height:24px;background:#f8d0a0;border-radius:50%;margin:0 auto;border:2px solid #c09060;"></div>
-    <div style="width:24px;height:8px;background:#8b1a1a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
-    <div style="width:36px;height:12px;background:#336688;margin:0 auto;border-radius:3px 3px 0 0;"></div>
-    <div style="width:40px;height:44px;background:#336688;margin:0 auto;border-radius:2px;position:relative;">
-      <div style="position:absolute;top:8px;left:9px;width:22px;height:12px;background:#fff;border-radius:1px;font-size:5px;display:flex;align-items:center;justify-content:center;color:#333;">ID</div>
-    </div>
-    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#224466;border-radius:2px;"></div><div style="width:12px;height:28px;background:#224466;border-radius:2px;"></div></div>
-  </div>
 
   <!-- Door to computer lab -->
   <div style="position:absolute;bottom:200px;right:0;width:80px;height:160px;background:#4a5a6a;border:4px solid #2a3a4a;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;">
@@ -476,6 +489,16 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;bottom:272px;left:575px;width:80px;height:60px;background:#111;border:2px solid #2244aa;border-radius:2px;display:flex;align-items:center;justify-content:center;"><div style="width:68px;height:48px;background:#0a1428;display:flex;align-items:center;justify-content:center;font-size:6px;color:#fa0;font-family:var(--vt);">SIM ENV</div></div>
   <div style="position:absolute;bottom:272px;left:705px;width:80px;height:60px;background:#111;border:2px solid #2244aa;border-radius:2px;display:flex;align-items:center;justify-content:center;"><div style="width:68px;height:48px;background:#0a1428;display:flex;align-items:center;justify-content:center;font-size:6px;color:#08f;font-family:var(--vt);">ENGR 101</div></div>
 
+  <!-- NPC: Lab proctor (left side, away from exit door) -->
+  <div class="hotspot glow" id="hs-labproctor" style="bottom:148px;left:90px;width:52px;height:90px;z-index:10;" onclick="openDialog('labproctor')">
+    <div class="tooltip">Talk to Lab Proctor</div>
+    <div style="width:22px;height:22px;background:#d0a880;border-radius:50%;margin:0 auto;border:2px solid #a07848;"></div>
+    <div style="width:18px;height:7px;background:#2a1a0a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
+    <div style="width:34px;height:11px;background:#553300;margin:0 auto;border-radius:3px 3px 0 0;"></div>
+    <div style="width:38px;height:40px;background:#553300;margin:0 auto;border-radius:2px;"></div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:11px;height:26px;background:#3a2200;border-radius:2px;"></div><div style="width:11px;height:26px;background:#3a2200;border-radius:2px;"></div></div>
+  </div>
+
   <!-- Desk row front -->
   <div style="position:absolute;bottom:190px;left:40px;width:820px;height:14px;background:#2a2e3a;border:2px solid #1a1e28;border-radius:1px;"></div>
   <div style="position:absolute;bottom:148px;left:40px;width:820px;height:46px;background:#222632;border:2px solid #1a1e28;"></div>
@@ -491,16 +514,6 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;bottom:190px;left:20px;width:70px;height:14px;background:#2a2e3a;border:2px solid #1a1e28;"></div>
   <div style="position:absolute;bottom:148px;left:20px;width:70px;height:46px;background:#222632;border:2px solid #1a1e28;"></div>
   <div style="position:absolute;bottom:202px;left:25px;width:60px;height:55px;background:#111;border:2px solid #aa4400;border-radius:2px;display:flex;align-items:center;justify-content:center;"><div style="width:50px;height:44px;background:#1a0a00;display:flex;align-items:center;justify-content:center;font-size:6px;color:#f84;font-family:var(--vt);">ADMIN</div></div>
-
-  <!-- NPC: Lab proctor (left side, away from exit door) -->
-  <div class="hotspot glow" id="hs-labproctor" style="bottom:198px;left:90px;width:52px;height:90px;z-index:10;" onclick="openDialog('labproctor')">
-    <div class="tooltip">Talk to Lab Proctor</div>
-    <div style="width:22px;height:22px;background:#d0a880;border-radius:50%;margin:0 auto;border:2px solid #a07848;"></div>
-    <div style="width:18px;height:7px;background:#2a1a0a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
-    <div style="width:34px;height:11px;background:#553300;margin:0 auto;border-radius:3px 3px 0 0;"></div>
-    <div style="width:38px;height:40px;background:#553300;margin:0 auto;border-radius:2px;"></div>
-    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:11px;height:26px;background:#3a2200;border-radius:2px;"></div><div style="width:11px;height:26px;background:#3a2200;border-radius:2px;"></div></div>
-  </div>
 
   <!-- Glowing hackable terminal hotspot -->
   <div class="hotspot glow" id="hs-terminal" style="bottom:272px;left:315px;width:80px;height:60px;" onclick="openDialog('labproctor')">
@@ -711,6 +724,17 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;top:40px;left:779px;width:4px;height:120px;background:#8a6030;"></div>
   <div style="position:absolute;top:100px;left:700px;height:4px;width:160px;background:#8a6030;"></div>
 
+  <!-- NPC: IT Guy -->
+  <div class="hotspot glow" id="hs-itguy" style="bottom:198px;left:320px;width:52px;height:90px;" onclick="openDialog('itguy')">
+    <div class="tooltip">Talk to IT Staff</div>
+    <div style="width:24px;height:24px;background:#e8b07a;border-radius:50%;margin:0 auto;border:2px solid #b07848;"></div>
+    <div style="width:36px;height:12px;background:#334;margin:2px auto 0;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#334;margin:0 auto;border-radius:2px;position:relative;">
+      <div style="position:absolute;top:8px;left:8px;width:24px;height:14px;background:#fff;border-radius:2px;font-size:6px;display:flex;align-items:center;justify-content:center;color:#333;">IT</div>
+    </div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div></div>
+  </div>
+
   <!-- Desk -->
   <div style="position:absolute;bottom:190px;left:100px;width:340px;height:20px;background:#8a5828;border:3px solid #5a3810;border-radius:2px;"></div>
   <div style="position:absolute;bottom:145px;left:105px;width:330px;height:50px;background:#a06838;border:2px solid #5a3810;"></div>
@@ -739,17 +763,6 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
       <span style="color:#2244aa">→ See IT staff for help</span><br>
       <span style="color:#336622">✓ All accounts verified</span>
     </div>
-  </div>
-
-  <!-- NPC: IT Guy -->
-  <div class="hotspot glow" id="hs-itguy" style="bottom:198px;left:340px;width:52px;height:90px;" onclick="openDialog('itguy')">
-    <div class="tooltip">Talk to IT Staff</div>
-    <div style="width:24px;height:24px;background:#e8b07a;border-radius:50%;margin:0 auto;border:2px solid #b07848;"></div>
-    <div style="width:36px;height:12px;background:#334;margin:2px auto 0;border-radius:3px 3px 0 0;"></div>
-    <div style="width:40px;height:44px;background:#334;margin:0 auto;border-radius:2px;position:relative;">
-      <div style="position:absolute;top:8px;left:8px;width:24px;height:14px;background:#fff;border-radius:2px;font-size:6px;display:flex;align-items:center;justify-content:center;color:#333;">IT</div>
-    </div>
-    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div><div style="width:12px;height:28px;background:#223;border-radius:2px;"></div></div>
   </div>
 
   <!-- Exit door (to room 3) -->
@@ -860,6 +873,16 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
     <div style="position:absolute;top:254px;left:4px;right:4px;height:36px;background:#4466aa;border-radius:1px;"></div>
   </div>
 
+  <!-- NPC: Student at table (roommate repurposed as library student) -->
+  <div class="hotspot glow" id="hs-roommate" style="bottom:198px;left:430px;width:52px;height:90px;" onclick="openDialog('roommate')">
+    <div class="tooltip">Talk to Student</div>
+    <div style="width:24px;height:24px;background:#f0c090;border-radius:50%;margin:0 auto;border:2px solid #c07840;"></div>
+    <div style="width:20px;height:10px;background:#3a2a1a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
+    <div style="width:36px;height:12px;background:#445588;margin:0 auto;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#445588;margin:0 auto;border-radius:2px;"></div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#334477;border-radius:2px;"></div><div style="width:12px;height:28px;background:#334477;border-radius:2px;"></div></div>
+  </div>
+
   <!-- Reading table in middle -->
   <div style="position:absolute;bottom:195px;left:310px;width:280px;height:16px;background:#7a4a20;border:3px solid #5a3010;border-radius:2px;"></div>
   <div style="position:absolute;bottom:160px;left:315px;width:270px;height:40px;background:#8a5828;border:2px solid #5a3010;"></div>
@@ -879,16 +902,6 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;top:75px;left:370px;width:160px;height:50px;background:#f8f0d8;border:3px solid #c8a850;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;">
     <div style="font-size:9px;font-family:var(--pixel);color:#7a5820;letter-spacing:2px;">📚 QUIET PLEASE</div>
     <div style="font-size:7px;font-family:var(--pixel);color:#a07840;">No food or drink</div>
-  </div>
-
-  <!-- NPC: Student at table (roommate repurposed as library student) -->
-  <div class="hotspot glow" id="hs-roommate" style="bottom:198px;left:430px;width:52px;height:90px;" onclick="openDialog('roommate')">
-    <div class="tooltip">Talk to Student</div>
-    <div style="width:24px;height:24px;background:#f0c090;border-radius:50%;margin:0 auto;border:2px solid #c07840;"></div>
-    <div style="width:20px;height:10px;background:#3a2a1a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
-    <div style="width:36px;height:12px;background:#445588;margin:0 auto;border-radius:3px 3px 0 0;"></div>
-    <div style="width:40px;height:44px;background:#445588;margin:0 auto;border-radius:2px;"></div>
-    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#334477;border-radius:2px;"></div><div style="width:12px;height:28px;background:#334477;border-radius:2px;"></div></div>
   </div>
 
   <!-- Exit door -->
@@ -1054,6 +1067,18 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;top:0;left:750px;width:3px;height:52px;background:#1a1a1a;"></div>
   <div style="position:absolute;top:46px;left:738px;width:26px;height:18px;background:#ffe880;border-radius:50% 50% 30% 30%;border:2px solid #c8a040;box-shadow:0 0 14px rgba(255,220,80,0.8);"></div>
 
+  <!-- NPC: Barista -->
+  <div class="hotspot glow" id="hs-barista" style="bottom:198px;left:380px;width:52px;height:90px;" onclick="openDialog('barista')">
+    <div class="tooltip">Talk to Barista</div>
+    <div style="width:24px;height:24px;background:#e8b880;border-radius:50%;margin:0 auto;border:2px solid #b07840;"></div>
+    <div style="width:20px;height:8px;background:#1a0a00;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
+    <div style="width:36px;height:12px;background:#00704a;margin:0 auto;border-radius:3px 3px 0 0;"></div>
+    <div style="width:40px;height:44px;background:#00704a;margin:0 auto;border-radius:2px;position:relative;">
+      <div style="position:absolute;top:6px;left:8px;width:24px;height:16px;background:#fff;border-radius:10px;font-size:8px;display:flex;align-items:center;justify-content:center;">☕</div>
+    </div>
+    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#005038;border-radius:2px;"></div><div style="width:12px;height:28px;background:#005038;border-radius:2px;"></div></div>
+  </div>
+
   <!-- Counter -->
   <div style="position:absolute;bottom:198px;left:240px;width:420px;height:20px;background:#5a3818;border:3px solid #3a2008;border-radius:2px;"></div>
   <div style="position:absolute;bottom:158px;left:245px;width:410px;height:44px;background:#6a4828;border:2px solid #3a2008;"></div>
@@ -1084,18 +1109,6 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;bottom:168px;left:760px;width:80px;height:34px;background:#8a5838;border:2px solid #4a2808;"></div>
   <div style="position:absolute;bottom:155px;left:774px;width:12px;height:47px;background:#5a3018;"></div>
   <div style="position:absolute;bottom:155px;left:814px;width:12px;height:47px;background:#5a3018;"></div>
-
-  <!-- NPC: Barista -->
-  <div class="hotspot glow" id="hs-barista" style="bottom:198px;left:380px;width:52px;height:90px;" onclick="openDialog('barista')">
-    <div class="tooltip">Talk to Barista</div>
-    <div style="width:24px;height:24px;background:#e8b880;border-radius:50%;margin:0 auto;border:2px solid #b07840;"></div>
-    <div style="width:20px;height:8px;background:#1a0a00;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
-    <div style="width:36px;height:12px;background:#00704a;margin:0 auto;border-radius:3px 3px 0 0;"></div>
-    <div style="width:40px;height:44px;background:#00704a;margin:0 auto;border-radius:2px;position:relative;">
-      <div style="position:absolute;top:6px;left:8px;width:24px;height:16px;background:#fff;border-radius:10px;font-size:8px;display:flex;align-items:center;justify-content:center;">☕</div>
-    </div>
-    <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#005038;border-radius:2px;"></div><div style="width:12px;height:28px;background:#005038;border-radius:2px;"></div></div>
-  </div>
 
   <!-- Exit door to cafeteria -->
   <div style="position:absolute;bottom:200px;right:0;width:80px;height:160px;background:#4a3818;border:4px solid #2a1808;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;">
@@ -1199,13 +1212,8 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
   <div style="position:absolute;bottom:148px;left:550px;width:36px;height:36px;background:#a88858;border:2px solid #7a5830;border-radius:2px 2px 0 0;"></div>
   <div style="position:absolute;bottom:148px;left:720px;width:36px;height:36px;background:#a88858;border:2px solid #7a5830;border-radius:2px 2px 0 0;"></div>
 
-  <!-- Cash register / checkout counter -->
-  <div style="position:absolute;bottom:198px;left:390px;width:120px;height:16px;background:#6a5030;border:2px solid #3a2810;border-radius:2px;"></div>
-  <div style="position:absolute;bottom:164px;left:393px;width:114px;height:38px;background:#7a6040;border:2px solid #3a2810;"></div>
-  <div style="position:absolute;bottom:198px;left:420px;width:60px;height:42px;background:#2a2a2a;border:2px solid #111;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#8f8;font-family:var(--vt);">$5.25</div>
-
   <!-- NPC: Cashier -->
-  <div class="hotspot glow" id="hs-cashier" style="bottom:198px;left:320px;width:52px;height:90px;" onclick="openDialog('cashier')">
+  <div class="hotspot glow" id="hs-cashier" style="bottom:198px;left:430px;width:52px;height:90px;" onclick="openDialog('cashier')">
     <div class="tooltip">Talk to Cashier</div>
     <div style="width:24px;height:24px;background:#f5c8a0;border-radius:50%;margin:0 auto;border:2px solid #c09060;"></div>
     <div style="width:20px;height:8px;background:#2a1a0a;margin:1px auto 0;border-radius:50% 50% 0 0;"></div>
@@ -1215,6 +1223,11 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
     </div>
     <div style="display:flex;gap:2px;justify-content:center;"><div style="width:12px;height:28px;background:#6a3010;border-radius:2px;"></div><div style="width:12px;height:28px;background:#6a3010;border-radius:2px;"></div></div>
   </div>
+
+  <!-- Cash register / checkout counter -->
+  <div style="position:absolute;bottom:198px;left:390px;width:120px;height:16px;background:#6a5030;border:2px solid #3a2810;border-radius:2px;"></div>
+  <div style="position:absolute;bottom:164px;left:393px;width:114px;height:38px;background:#7a6040;border:2px solid #3a2810;"></div>
+  <div style="position:absolute;bottom:198px;left:420px;width:60px;height:42px;background:#2a2a2a;border:2px solid #111;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#8f8;font-family:var(--vt);">$5.25</div>
 
   <!-- Final exit door -->
   <div style="position:absolute;bottom:200px;right:0;width:80px;height:160px;background:#5a4828;border:4px solid #3a2808;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;">
@@ -1245,6 +1258,7 @@ body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;ju
 </div>
 
 </div><!-- #game -->
+</div><!-- #game-outer -->
 
 <script>
 // ═══════════════════════════════════════════
@@ -1291,7 +1305,7 @@ function setRoom(n){
   state.room = n;
   document.querySelectorAll('.room').forEach(r=>r.classList.remove('active'));
   document.getElementById('room'+n).classList.add('active');
-  const names = ['','FIELDS ENGINEERING CENTER','FIELDS — LOBBY','FIELDS — COMPUTER LAB','BEAMAN LIBRARY','IT SERVICES OFFICE','LIBRARY — READING ROOM','ALUMNI HALL','ALUMNI HALL — STARBUCKS','STUDENT DINING HALL'];
+  const names = ['','FIELDS ENGINEERING CENTER','FIELDS — LOBBY','FIELDS — COMPUTER LAB','BEAMAN LIBRARY','FRONT DESK','LIBRARY — READING ROOM','ALUMNI HALL','ALUMNI HALL — STARBUCKS','STUDENT DINING HALL'];
   document.getElementById('room-name').textContent = names[n];
   updateProgress();
 }
@@ -1518,8 +1532,11 @@ function buildDialog(id){
       title.textContent = '🧑 CASHIER — STUDENT DINING';
       body.innerHTML = `
         <p><em>"Hey! Meal plan or cash today? Actually — our system just updated and it's asking for a few extra verification fields before it'll process meal plan swipes. Really sorry about this, it's a new compliance thing."</em></p>
-        <label class="d-label">Your meal plan ID number</label>
-        <input class="d-input" id="q-mealplan" type="text" placeholder="e.g. MP-20241234">
+        <label class="d-label">Do you have a meal plan?</label>
+        <div class="radio-row" id="rg-mealplan">
+          <label onclick="selRadio(this,'rg-mealplan')"><input type="radio" name="mealplan" value="Yes, I have a meal plan"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> Yes, I have a meal plan</label>
+          <label onclick="selRadio(this,'rg-mealplan')"><input type="radio" name="mealplan" value="No, I pay with cash/card"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> No, I pay with cash / card</label>
+        </div>
         <label class="d-label">Do you have any food allergies on file?</label>
         <div class="radio-row" id="rg-allgy">
           <label onclick="selRadio(this,'rg-allgy')"><input type="radio" name="allgy" value="None"><div class="radio-dot" style="width:10px;height:10px;border:2px solid #aaa;border-radius:50%;flex-shrink:0;"></div> None</label>
@@ -1668,7 +1685,7 @@ function submitRoom8(){
 }
 
 function submitRoom9(){
-  const meal  = document.getElementById('q-mealplan')?.value.trim();
+  const meal  = document.querySelector('input[name="mealplan"]:checked')?.value;
   const allgy = document.querySelector('input[name="allgy"]:checked')?.value;
   if(!meal || !allgy){ show('err9'); return; }
   hide('err9'); show('ok9');
@@ -1767,7 +1784,7 @@ function showReveal(){
     grad_year:           ["Graduation year",            "Room 7 — Bennett Center"],
     loyalty_email:       ["Email address (loyalty)",    "Room 8 — Starbucks"],
     birthday:            ["Date of birth",              "Room 8 — Starbucks"],
-    meal_plan_id:        ["Meal plan ID number",        "Room 9 — Dining Hall"],
+    meal_plan_id:        ["Has a meal plan",             "Room 9 — Dining Hall"],
     allergies:           ["Food allergies on file",     "Room 9 — Dining Hall"],
   };
 
@@ -1830,6 +1847,18 @@ function resetGame(){
 }
 
 
+</script>
+
+<script>
+function scaleGame(){
+  const el = document.getElementById('game');
+  const scaleX = window.innerWidth / 908;
+  const scaleY = window.innerHeight / 568;
+  const scale = Math.min(scaleX, scaleY, 1);
+  el.style.transform = 'scale('+scale+')';
+}
+scaleGame();
+window.addEventListener('resize', scaleGame);
 </script>
 </body>
 </html>
