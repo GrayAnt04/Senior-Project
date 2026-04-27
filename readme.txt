@@ -25,8 +25,8 @@ Beaman Library (exterior)
 Front Desk
 Library — Reading Room
 
-Alumni Hall (exterior)
-Alumni Hall — Starbucks
+Bennet Student Center (exterior)
+Starbucks
 Student Dining Hall
 
 Each room has one NPC or puzzle that must be solved before the exit unlocks
