@@ -1,7 +1,7 @@
 Dont Get Trapped
 A browser-based, pixel-art social engineering awareness game set on a Lipscombs campus. Players navigate through nine rooms, each presenting a realistic phishing or social engineering scenario. The goal is to recognize the manipulation tactics — but the game is intentionally designed so most players fall for them the first time.
 
-Setup
+--- Setup ---
 No installation, build tools, or server required.
 
 Visit https://grayant04.github.io/Senior-Project/ on any browser
@@ -13,7 +13,7 @@ Open it in any modern web browser (Chrome, Firefox, Safari, Edge)
 
 The only external dependency is Google Fonts. An internet connection is needed for the fonts to display correctly but the game itself will still function offline, just with fallback fonts.
 
-How to Play
+--- How to Play ---
 Use your mouse to click on glowing NPCs and objects in each room. Talk to the NPCs to trigger dialogue. Fill in the forms they present to progress to the next room. A progress bar at the top tracks how far through the campus you have gotten.
 Rooms in order:
 
@@ -31,7 +31,7 @@ Student Dining Hall
 
 Each room has one NPC or puzzle that must be solved before the exit unlocks
 
-Project Structure
+--- Project Structure ---
 The project is organized into three sections:
 
 CSS — all styles are written inline in the <head>, using CSS custom properties for the color palette and pixel art aesthetic
@@ -40,8 +40,7 @@ JavaScript — all game logic is contained in a <script> tag at the bottom, incl
 
 There are no external JavaScript libraries, no frameworks, and no asset files. Everything is drawn with HTML <div> elements and CSS.
 
-Editing the Game
-
+--- Editing the Game ---
 Moving or modifying NPCs
 - Each NPC is a <div class="hotspot glow" id="hs-[name]"> element. Position is controlled by bottom and left CSS values within its style attribute.
 
@@ -60,8 +59,8 @@ Changing room names
 - jsconst names = ['','FIELDS ENGINEERING CENTER','FIELDS — LOBBY', ...]
 - Index 0 is unused; index 1 corresponds to room 1, and so on
 
-Browser Compatibility
+--- Browser Compatibility ---
 Tested in current versions of Chrome, Firefox, and Safari. Requires a browser with support for CSS custom properties, position: absolute stacking, and standard ES6 JavaScript.
 
-Intended Use
+--- Intended Use ---
 This game is designed as an educational tool for cybersecurity awareness training, focused on social engineering, phishing, and pretexting. It is suitable for classroom use and self-guided learning. After completing the game, facilitators are encouraged to debrief players on what happened and why you shouldnt input sensitive information.
